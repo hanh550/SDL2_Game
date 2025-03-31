@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h> // Thêm SDL_mixer
 #include <vector>
 #include <cstdlib>
 #include <ctime>
@@ -16,9 +17,9 @@ const int SCREEN_HEIGHT = 600;
 const int PLAYER_SPEED = 5;
 const int BULLET_SPEED = 7;
 const int ENEMY_SPEED = 2;
-const int BOSS_SPEED = 3; // Tốc độ di chuyển ngang của boss
+const int BOSS_SPEED = 3;
 
-enum GameState { MENU, PLAYING, GAME_OVER, WIN, EXIT };
+enum GameState { MENU, TUTORIAL, PLAYING, GAME_OVER, WIN, EXIT };
 GameState gameState = MENU;
 
 SDL_Window* window = nullptr;
@@ -43,11 +44,16 @@ SDL_Texture* playAgainTexture = nullptr;
 SDL_Texture* exitTexture = nullptr;
 SDL_Texture* onePlayerTexture = nullptr;
 SDL_Texture* twoPlayersTexture = nullptr;
+SDL_Texture* tutorialTexture = nullptr;
 SDL_Texture* menuExitTexture = nullptr;
+SDL_Texture* tutorialTextTexture1 = nullptr;
+SDL_Texture* tutorialTextTexture2 = nullptr;
+SDL_Texture* backToMenuTexture = nullptr;
 TTF_Font* font = nullptr;
 TTF_Font* bigFont = nullptr;
 SDL_Color white = {255, 255, 255, 255};
 SDL_Color red = {255, 0, 0, 255};
+SDL_Color yellow = {255, 255, 0, 255};
 SDL_Rect scoreRect;
 SDL_Rect gameOverRect;
 SDL_Rect winRect;
@@ -55,7 +61,30 @@ SDL_Rect playAgainRect;
 SDL_Rect exitRect;
 SDL_Rect onePlayerRect;
 SDL_Rect twoPlayersRect;
+SDL_Rect tutorialRect;
 SDL_Rect menuExitRect;
+SDL_Rect tutorialTextRect1;
+SDL_Rect tutorialTextRect2;
+SDL_Rect backToMenuRect;
+
+// Âm thanh
+Mix_Music* backgroundMusic = nullptr; // Nhạc nền
+Mix_Chunk* shootSound = nullptr;     // Âm thanh bắn
+Mix_Chunk* explosionSound = nullptr; // Âm thanh nổ
+Mix_Chunk* clickSound = nullptr;     // Âm thanh nhấp chuột
+Mix_Chunk* winSound = nullptr;       // Âm thanh khi thắng
+Mix_Chunk* gameOverSound = nullptr;  // Âm thanh khi thua
+
+// Trạng thái để kiểm soát việc phát âm thanh WIN và GAME_OVER (chỉ phát một lần)
+bool winSoundPlayed = false;
+bool gameOverSoundPlayed = false;
+
+// Trạng thái hover
+bool onePlayerHover = false;
+bool twoPlayersHover = false;
+bool tutorialHover = false;
+bool exitHover = false;
+bool backToMenuHover = false;
 
 struct Explosion {
     int x, y, w, h;
@@ -66,9 +95,9 @@ struct Explosion {
 struct Object {
     int x, y, w, h;
     bool active;
-    int enemyType; // 1-5: kẻ địch thường, 6: boss
-    int health;   // Thanh máu
-    int direction; // Thêm biến để theo dõi hướng di chuyển của boss (1: phải, -1: trái)
+    int enemyType;
+    int health;
+    int direction;
 };
 
 Object player1 = {SCREEN_WIDTH / 4 - 25, SCREEN_HEIGHT - 60, 50, 50, true, 0, 1, 0};
@@ -117,10 +146,18 @@ SDL_Texture* renderText(const char* text, TTF_Font* textFont, SDL_Color color) {
 }
 
 bool init() {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    // Khởi tạo SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) { // Thêm SDL_INIT_AUDIO
         printf("SDL_Init failed: %s\n", SDL_GetError());
         return false;
     }
+
+    // Khởi tạo SDL_mixer
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        printf("SDL_mixer failed to initialize: %s\n", Mix_GetError());
+        return false;
+    }
+
     if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) {
         printf("IMG_Init failed: %s\n", IMG_GetError());
         return false;
@@ -142,6 +179,7 @@ bool init() {
         return false;
     }
 
+    // Tải các texture
     menuBackground = loadTexture("chickenbackground.jpg");
     if (!menuBackground) return false;
     background = loadTexture("space.jpg");
@@ -169,6 +207,7 @@ bool init() {
     explosionTexture = loadTexture("explosion.png");
     if (!explosionTexture) return false;
 
+    // Tải font
     font = TTF_OpenFont("arial.ttf", 36);
     if (!font) {
         printf("Failed to load font: %s\n", TTF_GetError());
@@ -180,6 +219,54 @@ bool init() {
         return false;
     }
 
+    // Tải âm thanh
+    // Tải âm thanh
+backgroundMusic = Mix_LoadMUS("background_music.mp3");
+if (!backgroundMusic) {
+    printf("Failed to load background music: %s\n", Mix_GetError());
+    return false;
+}
+
+shootSound = Mix_LoadWAV("shoot.wav");
+if (!shootSound) {
+    printf("Failed to load shoot sound: %s\n", Mix_GetError());
+    return false;
+}
+
+explosionSound = Mix_LoadWAV("explosion.wav");
+if (!explosionSound) {
+    printf("Failed to load explosion sound: %s\n", Mix_GetError());
+    return false;
+}
+
+clickSound = Mix_LoadWAV("click.wav");
+if (!clickSound) {
+    printf("Failed to load click sound: %s\n", Mix_GetError());
+    return false;
+}
+
+winSound = Mix_LoadWAV("win_sound.wav");
+if (!winSound) {
+    printf("Failed to load win sound: %s\n", Mix_GetError());
+    return false;
+}
+
+gameOverSound = Mix_LoadWAV("gameover_sound.wav");
+if (!gameOverSound) {
+    printf("Failed to load game over sound: %s\n", Mix_GetError());
+    return false;
+}
+
+    clickSound = Mix_LoadWAV("click.wav");
+    if (!clickSound) {
+        printf("Failed to load click sound: %s\n", Mix_GetError());
+        return false;
+    }
+
+    // Phát nhạc nền
+    Mix_PlayMusic(backgroundMusic, -1); // -1 để lặp vô hạn
+
+    // Tạo các texture văn bản
     char scoreText[32];
     sprintf(scoreText, "Score: %d", score);
     scoreTexture = renderText(scoreText, font, white);
@@ -207,20 +294,48 @@ bool init() {
     SDL_QueryTexture(exitTexture, NULL, NULL, &exitRect.w, &exitRect.h);
     exitRect = {(SCREEN_WIDTH - exitRect.w) / 2, playAgainRect.y + playAgainRect.h + 50, exitRect.w, exitRect.h};
 
+    // Đặt các mục menu vào 4 góc với khoảng cách lề 20 pixel
+    int padding = 20;
+
+    // Góc trên-trái: 1 Player
     onePlayerTexture = renderText("1 Player", font, red);
     if (!onePlayerTexture) return false;
     SDL_QueryTexture(onePlayerTexture, NULL, NULL, &onePlayerRect.w, &onePlayerRect.h);
-    onePlayerRect = {(SCREEN_WIDTH - onePlayerRect.w) / 2, SCREEN_HEIGHT / 4, onePlayerRect.w, onePlayerRect.h};
+    onePlayerRect = {padding, padding, onePlayerRect.w, onePlayerRect.h};
 
+    // Góc trên-phải: 2 Players
     twoPlayersTexture = renderText("2 Players", font, red);
     if (!twoPlayersTexture) return false;
     SDL_QueryTexture(twoPlayersTexture, NULL, NULL, &twoPlayersRect.w, &twoPlayersRect.h);
-    twoPlayersRect = {(SCREEN_WIDTH - twoPlayersRect.w) / 2, onePlayerRect.y + onePlayerRect.h + 50, twoPlayersRect.w, twoPlayersRect.h};
+    twoPlayersRect = {SCREEN_WIDTH - twoPlayersRect.w - padding, padding, twoPlayersRect.w, twoPlayersRect.h};
 
-    menuExitTexture = renderText("Exit", font, red);
+    // Góc dưới-trái: Tutorial
+    tutorialTexture = renderText("Tutorial", font, red);
+    if (!tutorialTexture) return false;
+    SDL_QueryTexture(tutorialTexture, NULL, NULL, &tutorialRect.w, &tutorialRect.h);
+    tutorialRect = {padding, SCREEN_HEIGHT - tutorialRect.h - padding, tutorialRect.w, tutorialRect.h};
+
+    // Góc dưới-phải: Exit
+    menuExitTexture = renderText("  Exit", font, red);
     if (!menuExitTexture) return false;
     SDL_QueryTexture(menuExitTexture, NULL, NULL, &menuExitRect.w, &menuExitRect.h);
-    menuExitRect = {(SCREEN_WIDTH - menuExitRect.w) / 2, twoPlayersRect.y + twoPlayersRect.h + 50, menuExitRect.w, menuExitRect.h};
+    menuExitRect = {SCREEN_WIDTH - menuExitRect.w - padding, SCREEN_HEIGHT - menuExitRect.h - padding, menuExitRect.w, menuExitRect.h};
+
+    // Nội dung tutorial
+    tutorialTextTexture1 = renderText("Tutorial: Use A/D to move Player 1, Space to shoot.", font, white);
+    if (!tutorialTextTexture1) return false;
+    SDL_QueryTexture(tutorialTextTexture1, NULL, NULL, &tutorialTextRect1.w, &tutorialTextRect1.h);
+    tutorialTextRect1 = {(SCREEN_WIDTH - tutorialTextRect1.w) / 2, SCREEN_HEIGHT / 3, tutorialTextRect1.w, tutorialTextRect1.h};
+
+    tutorialTextTexture2 = renderText("For Player 2: Left/Right to move, Enter to shoot.", font, white);
+    if (!tutorialTextTexture2) return false;
+    SDL_QueryTexture(tutorialTextTexture2, NULL, NULL, &tutorialTextRect2.w, &tutorialTextRect2.h);
+    tutorialTextRect2 = {(SCREEN_WIDTH - tutorialTextRect2.w) / 2, tutorialTextRect1.y + 50, tutorialTextRect2.w, tutorialTextRect2.h};
+
+    backToMenuTexture = renderText("Back to Menu", font, white);
+    if (!backToMenuTexture) return false;
+    SDL_QueryTexture(backToMenuTexture, NULL, NULL, &backToMenuRect.w, &backToMenuRect.h);
+    backToMenuRect = {(SCREEN_WIDTH - backToMenuRect.w) / 2, tutorialTextRect2.y + 100, backToMenuRect.w, backToMenuRect.h};
 
     return true;
 }
@@ -239,13 +354,47 @@ void updateScoreTexture() {
 void renderMenu() {
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, menuBackground, nullptr, nullptr);
+
+    // Hiển thị các mục menu với hiệu ứng hover
+    SDL_DestroyTexture(onePlayerTexture);
+    onePlayerTexture = renderText("1 Player", font, onePlayerHover ? yellow : red);
     SDL_RenderCopy(renderer, onePlayerTexture, nullptr, &onePlayerRect);
+
+    SDL_DestroyTexture(twoPlayersTexture);
+    twoPlayersTexture = renderText("2 Players", font, twoPlayersHover ? yellow : red);
     SDL_RenderCopy(renderer, twoPlayersTexture, nullptr, &twoPlayersRect);
+
+    SDL_DestroyTexture(tutorialTexture);
+    tutorialTexture = renderText("Tutorial", font, tutorialHover ? yellow : red);
+    SDL_RenderCopy(renderer, tutorialTexture, nullptr, &tutorialRect);
+
+    SDL_DestroyTexture(menuExitTexture);
+    menuExitTexture = renderText("  Exit", font, exitHover ? yellow : red);
     SDL_RenderCopy(renderer, menuExitTexture, nullptr, &menuExitRect);
+
+    SDL_RenderPresent(renderer);
+}
+
+void renderTutorial() {
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, background, nullptr, nullptr);
+    SDL_RenderCopy(renderer, tutorialTextTexture1, nullptr, &tutorialTextRect1);
+    SDL_RenderCopy(renderer, tutorialTextTexture2, nullptr, &tutorialTextRect2);
+
+    SDL_DestroyTexture(backToMenuTexture);
+    backToMenuTexture = renderText("Back to Menu", font, backToMenuHover ? yellow : white);
+    SDL_RenderCopy(renderer, backToMenuTexture, nullptr, &backToMenuRect);
+
     SDL_RenderPresent(renderer);
 }
 
 void renderGameOver() {
+    // Phát âm thanh game over chỉ một lần khi vào trạng thái này
+    if (!gameOverSoundPlayed) {
+        Mix_PlayChannel(-1, gameOverSound, 0);
+        gameOverSoundPlayed = true;
+    }
+
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, background, nullptr, nullptr);
     SDL_RenderCopy(renderer, gameOverTexture, nullptr, &gameOverRect);
@@ -255,6 +404,12 @@ void renderGameOver() {
 }
 
 void renderWin() {
+    // Phát âm thanh win chỉ một lần khi vào trạng thái này
+    if (!winSoundPlayed) {
+        Mix_PlayChannel(-1, winSound, 0);
+        winSoundPlayed = true;
+    }
+
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, background, nullptr, nullptr);
     SDL_RenderCopy(renderer, winTexture, nullptr, &winRect);
@@ -271,34 +426,73 @@ void handleEvents(bool& running) {
             gameState = EXIT;
         }
 
+        if (e.type == SDL_MOUSEMOTION) {
+            int mouseX, mouseY;
+            SDL_GetMouseState(&mouseX, &mouseY);
+
+            if (gameState == MENU) {
+                onePlayerHover = (mouseX >= onePlayerRect.x && mouseX <= onePlayerRect.x + onePlayerRect.w &&
+                                  mouseY >= onePlayerRect.y && mouseY <= onePlayerRect.y + onePlayerRect.h);
+                twoPlayersHover = (mouseX >= twoPlayersRect.x && mouseX <= twoPlayersRect.x + twoPlayersRect.w &&
+                                   mouseY >= twoPlayersRect.y && mouseY <= twoPlayersRect.y + twoPlayersRect.h);
+                tutorialHover = (mouseX >= tutorialRect.x && mouseX <= tutorialRect.x + tutorialRect.w &&
+                                 mouseY >= tutorialRect.y && mouseY <= tutorialRect.y + tutorialRect.h);
+                exitHover = (mouseX >= menuExitRect.x && mouseX <= menuExitRect.x + menuExitRect.w &&
+                             mouseY >= menuExitRect.y && mouseY <= menuExitRect.y + menuExitRect.h);
+            }
+            else if (gameState == TUTORIAL) {
+                backToMenuHover = (mouseX >= backToMenuRect.x && mouseX <= backToMenuRect.x + backToMenuRect.w &&
+                                   mouseY >= backToMenuRect.y && mouseY <= backToMenuRect.y + backToMenuRect.h);
+            }
+        }
+
         if (e.type == SDL_MOUSEBUTTONDOWN) {
+            // Khai báo và gán giá trị cho mouseX, mouseY ngay đầu khối
             int mouseX, mouseY;
             SDL_GetMouseState(&mouseX, &mouseY);
 
             if (gameState == MENU) {
                 if (mouseX >= onePlayerRect.x && mouseX <= onePlayerRect.x + onePlayerRect.w &&
                     mouseY >= onePlayerRect.y && mouseY <= onePlayerRect.y + onePlayerRect.h) {
+                    Mix_PlayChannel(-1, clickSound, 0); // Phát âm thanh nhấp chuột
                     isTwoPlayers = false;
                     player1 = {SCREEN_WIDTH / 2 - 25, SCREEN_HEIGHT - 60, 50, 50, true, 0, 1, 0};
                     player2.active = false;
                     gameState = PLAYING;
+                    Mix_PauseMusic(); // Tạm dừng nhạc nền khi vào game
                 }
                 else if (mouseX >= twoPlayersRect.x && mouseX <= twoPlayersRect.x + twoPlayersRect.w &&
                          mouseY >= twoPlayersRect.y && mouseY <= twoPlayersRect.y + twoPlayersRect.h) {
+                    Mix_PlayChannel(-1, clickSound, 0); // Phát âm thanh nhấp chuột
                     isTwoPlayers = true;
                     player1 = {SCREEN_WIDTH / 4 - 25, SCREEN_HEIGHT - 60, 50, 50, true, 0, 1, 0};
                     player2 = {3 * SCREEN_WIDTH / 4 - 40, SCREEN_HEIGHT - 80, 50, 50, true, 0, 1, 0};
                     gameState = PLAYING;
+                    Mix_PauseMusic(); // Tạm dừng nhạc nền khi vào game
+                }
+                else if (mouseX >= tutorialRect.x && mouseX <= tutorialRect.x + tutorialRect.w &&
+                         mouseY >= tutorialRect.y && mouseY <= tutorialRect.y + tutorialRect.h) {
+                    Mix_PlayChannel(-1, clickSound, 0); // Phát âm thanh nhấp chuột
+                    gameState = TUTORIAL;
                 }
                 else if (mouseX >= menuExitRect.x && mouseX <= menuExitRect.x + menuExitRect.w &&
                          mouseY >= menuExitRect.y && mouseY <= menuExitRect.y + menuExitRect.h) {
+                    Mix_PlayChannel(-1, clickSound, 0); // Phát âm thanh nhấp chuột
                     gameState = EXIT;
                     running = false;
+                }
+            }
+            else if (gameState == TUTORIAL) {
+                if (mouseX >= backToMenuRect.x && mouseX <= backToMenuRect.x + backToMenuRect.w &&
+                    mouseY >= backToMenuRect.y && mouseY <= backToMenuRect.y + backToMenuRect.h) {
+                    Mix_PlayChannel(-1, clickSound, 0); // Phát âm thanh nhấp chuột
+                    gameState = MENU;
                 }
             }
             else if (gameState == GAME_OVER || gameState == WIN) {
                 if (mouseX >= playAgainRect.x && mouseX <= playAgainRect.x + playAgainRect.w &&
                     mouseY >= playAgainRect.y && mouseY <= playAgainRect.y + playAgainRect.h) {
+                    Mix_PlayChannel(-1, clickSound, 0); // Phát âm thanh nhấp chuột
                     if (isTwoPlayers) {
                         player1 = {SCREEN_WIDTH / 4 - 25, SCREEN_HEIGHT - 60, 50, 50, true, 0, 1, 0};
                         player2 = {3 * SCREEN_WIDTH / 4 - 40, SCREEN_HEIGHT - 80, 50, 50, true, 0, 1, 0};
@@ -316,10 +510,13 @@ void handleEvents(bool& running) {
                     bulletCooldown2 = 0;
                     bossSpawned = false;
                     updateScoreTexture();
+                    winSoundPlayed = false; // Reset trạng thái âm thanh WIN
+                    gameOverSoundPlayed = false; // Reset trạng thái âm thanh GAME_OVER
                     gameState = PLAYING;
                 }
                 else if (mouseX >= exitRect.x && mouseX <= exitRect.x + exitRect.w &&
                          mouseY >= exitRect.y && mouseY <= exitRect.y + exitRect.h) {
+                    Mix_PlayChannel(-1, clickSound, 0); // Phát âm thanh nhấp chuột
                     gameState = EXIT;
                     running = false;
                 }
@@ -331,6 +528,7 @@ void handleEvents(bool& running) {
 void updateGame() {
     if ((!player1.active && !isTwoPlayers) || (!player1.active && !player2.active && isTwoPlayers)) {
         gameState = GAME_OVER;
+        Mix_ResumeMusic(); // Tiếp tục nhạc nền khi game over
         return;
     }
 
@@ -342,6 +540,7 @@ void updateGame() {
         player1.x += PLAYER_SPEED;
     if (keystates[SDL_SCANCODE_SPACE] && bulletCooldown1 == 0 && player1.active) {
         bullets.push_back({player1.x + player1.w / 2 - 5, player1.y, 10, 20, true, 0, 1, 0});
+        Mix_PlayChannel(-1, shootSound, 0); // Phát âm thanh bắn
         bulletCooldown1 = 10;
     }
     if (bulletCooldown1 > 0) bulletCooldown1--;
@@ -353,6 +552,7 @@ void updateGame() {
             player2.x += PLAYER_SPEED;
         if (keystates[SDL_SCANCODE_RETURN] && bulletCooldown2 == 0 && player2.active) {
             bullets.push_back({player2.x + player2.w / 2 - 5, player2.y, 10, 20, true, 0, 1, 0});
+            Mix_PlayChannel(-1, shootSound, 0); // Phát âm thanh bắn
             bulletCooldown2 = 10;
         }
         if (bulletCooldown2 > 0) bulletCooldown2--;
@@ -363,7 +563,7 @@ void updateGame() {
 
     if (!bossSpawned) {
         if (score >= 500 && enemies.empty()) {
-            enemies.push_back({SCREEN_WIDTH / 2 - 50, 50, 100, 100, true, 6, 50, 1}); // Boss bắt đầu ở y = 50, direction = 1 (phải)
+            enemies.push_back({SCREEN_WIDTH / 2 - 50, 50, 100, 100, true, 6, 50, 1});
             bossSpawned = true;
         } else if (score < 500) {
             int baseEnemies = 1;
@@ -381,21 +581,18 @@ void updateGame() {
     }
 
     for (auto& enemy : enemies) {
-        if (enemy.enemyType == 6) { // Logic cho boss
-            // Di chuyển ngang
+        if (enemy.enemyType == 6) {
             enemy.x += BOSS_SPEED * enemy.direction;
-            if (enemy.x <= 0) enemy.direction = 1; // Đổi hướng sang phải khi chạm biên trái
-            if (enemy.x >= SCREEN_WIDTH - enemy.w) enemy.direction = -1; // Đổi hướng sang trái khi chạm biên phải
+            if (enemy.x <= 0) enemy.direction = 1;
+            if (enemy.x >= SCREEN_WIDTH - enemy.w) enemy.direction = -1;
 
-            // Xả đạn liên tục
-            int shootChance = 10; // Giảm shootChance để bắn liên tục hơn
+            int shootChance = 10;
             if (rand() % shootChance == 0 && enemy.active) {
-                // Bắn 3 viên đạn từ các vị trí khác nhau trên boss
                 enemyBullets.push_back({enemy.x + enemy.w / 4 - 5, enemy.y + enemy.h, 10, 20, true, 0, 1, 0});
                 enemyBullets.push_back({enemy.x + enemy.w / 2 - 5, enemy.y + enemy.h, 10, 20, true, 0, 1, 0});
                 enemyBullets.push_back({enemy.x + 3 * enemy.w / 4 - 5, enemy.y + enemy.h, 10, 20, true, 0, 1, 0});
             }
-        } else { // Logic cho kẻ địch thường
+        } else {
             enemy.y += ENEMY_SPEED;
             int shootChance = 100;
             if (rand() % shootChance == 0 && enemy.active) {
@@ -420,8 +617,10 @@ void updateGame() {
                     score += (enemies[i].enemyType == 6) ? 50 : 10;
                     updateScoreTexture();
                     explosions.push_back({enemies[i].x, enemies[i].y, 50, 50, 20, true});
+                    Mix_PlayChannel(-1, explosionSound, 0); // Phát âm thanh nổ
                     if (enemies[i].enemyType == 6) {
                         gameState = WIN;
+                        Mix_ResumeMusic(); // Tiếp tục nhạc nền khi thắng
                     }
                 }
             }
@@ -434,6 +633,7 @@ void updateGame() {
             player1.y < enemies[i].y + enemies[i].h && player1.y + player1.h > enemies[i].y) {
             player1.active = false;
             explosions.push_back({player1.x, player1.y, 50, 50, 20, true});
+            Mix_PlayChannel(-1, explosionSound, 0); // Phát âm thanh nổ
             break;
         }
     }
@@ -445,6 +645,7 @@ void updateGame() {
                 player2.y < enemies[i].y + enemies[i].h && player2.y + player2.h > enemies[i].y) {
                 player2.active = false;
                 explosions.push_back({player2.x, player2.y, 50, 50, 20, true});
+                Mix_PlayChannel(-1, explosionSound, 0); // Phát âm thanh nổ
                 break;
             }
         }
@@ -457,6 +658,7 @@ void updateGame() {
             player1.active = false;
             enemyBullets[i].active = false;
             explosions.push_back({player1.x, player1.y, 50, 50, 20, true});
+            Mix_PlayChannel(-1, explosionSound, 0); // Phát âm thanh nổ
             break;
         }
     }
@@ -469,26 +671,19 @@ void updateGame() {
                 player2.active = false;
                 enemyBullets[i].active = false;
                 explosions.push_back({player2.x, player2.y, 50, 50, 20, true});
+                Mix_PlayChannel(-1, explosionSound, 0); // Phát âm thanh nổ
                 break;
             }
         }
     }
 
-    // Cập nhật và xóa các vụ nổ
     for (auto& explosion : explosions) {
         if (explosion.active) {
             explosion.frame--;
-            if (explosion.frame <= 0) {
-                explosion.active = false;
-            }
+            if (explosion.frame <= 0) explosion.active = false;
         }
     }
-    explosions.erase(
-        remove_if(explosions.begin(), explosions.end(), 
-            [](const Explosion& e) { return !e.active; }), 
-        explosions.end()
-    );
-
+    explosions.erase(remove_if(explosions.begin(), explosions.end(), [](const Explosion& e) { return !e.active; }), explosions.end());
     bullets.erase(remove_if(bullets.begin(), bullets.end(), [](const Object& b) { return !b.active; }), bullets.end());
     enemies.erase(remove_if(enemies.begin(), enemies.end(), [](const Object& e) { return !e.active; }), enemies.end());
     enemyBullets.erase(remove_if(enemyBullets.begin(), enemyBullets.end(), [](const Object& b) { return !b.active; }), enemyBullets.end());
@@ -541,10 +736,21 @@ void render() {
 }
 
 void clean() {
+    // Dọn dẹp tài nguyên âm thanh
+    if (backgroundMusic) Mix_FreeMusic(backgroundMusic);
+    if (shootSound) Mix_FreeChunk(shootSound);
+    if (explosionSound) Mix_FreeChunk(explosionSound);
+    if (clickSound) Mix_FreeChunk(clickSound);
+    if (winSound) Mix_FreeChunk(winSound);
+    if (gameOverSound) Mix_FreeChunk(gameOverSound);
+    Mix_CloseAudio();
+
+    // Dọn dẹp font
     if (font) TTF_CloseFont(font);
     if (bigFont) TTF_CloseFont(bigFont);
     TTF_Quit();
 
+    // Dọn dẹp texture
     if (menuBackground) SDL_DestroyTexture(menuBackground);
     if (background) SDL_DestroyTexture(background);
     if (player1Texture) SDL_DestroyTexture(player1Texture);
@@ -565,7 +771,11 @@ void clean() {
     if (exitTexture) SDL_DestroyTexture(exitTexture);
     if (onePlayerTexture) SDL_DestroyTexture(onePlayerTexture);
     if (twoPlayersTexture) SDL_DestroyTexture(twoPlayersTexture);
+    if (tutorialTexture) SDL_DestroyTexture(tutorialTexture);
     if (menuExitTexture) SDL_DestroyTexture(menuExitTexture);
+    if (tutorialTextTexture1) SDL_DestroyTexture(tutorialTextTexture1);
+    if (tutorialTextTexture2) SDL_DestroyTexture(tutorialTextTexture2);
+    if (backToMenuTexture) SDL_DestroyTexture(backToMenuTexture);
 
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
@@ -573,7 +783,6 @@ void clean() {
     IMG_Quit();
     SDL_Quit();
 }
-
 int main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
@@ -591,6 +800,9 @@ int main(int argc, char* argv[]) {
         switch (gameState) {
             case MENU:
                 renderMenu();
+                break;
+            case TUTORIAL:
+                renderTutorial();
                 break;
             case PLAYING:
                 updateGame();
