@@ -1,52 +1,50 @@
-#define SDL_MAIN_HANDLED
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
-#include <SDL2/SDL_mixer.h> // Thêm SDL_mixer
-#include <vector>
-#include <cstdlib>
-#include <ctime>
-#include <algorithm>
-#include <cstdio>
+#include <SDL2/SDL.h> // SDL2 cơ bản để xử lý đồ họa, sự kiện và cửa sổ
+#include <SDL2/SDL_image.h> // để tải và xử lý hình ảnh 
+#include <SDL2/SDL_ttf.h> // thêm SDL_ttf để thêm văn bản bằng font
+#include <SDL2/SDL_mixer.h> // Thêm SDL_mixer để xử lý âm thanh 
+#include <vector> // để lưu trữ danh sách(đạn, kẻ địch ...)
+#include <cstdlib> // thư viện c++ cho rand() và srand()
+#include <ctime> // thư viện để lấy thời  gian hiện tại 
+#include <algorithm> // thư viện để sử dụng remove_if
+#include <cstdio> // thư viện để dùng printf
 
 using namespace std;
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
-const int PLAYER_SPEED = 5;
-const int BULLET_SPEED = 7;
-const int ENEMY_SPEED = 2;
-const int BOSS_SPEED = 3;
+const int SCREEN_WIDTH = 800; // chiều rộng màn hình là 800 pixel
+const int SCREEN_HEIGHT = 600; // chiều cao màn hình là 600 pixel
+const int PLAYER_SPEED = 5; //tốc độ di chuyển của người chơi là 5 pixel / giây 
+const int BULLET_SPEED = 7; // tốc độ bay của viên đạn là 7 pixel trên giây
+const int ENEMY_SPEED = 2; //tốc độ di chuyển của địch là 2 pixel / giây
+const int BOSS_SPEED = 3; // tốc độ di chuyển của boss là 2 pixel/ giây
 
-enum GameState { MENU, TUTORIAL, PLAYING, GAME_OVER, WIN, EXIT };
-GameState gameState = MENU;
+enum GameState { MENU, TUTORIAL, PLAYING, GAME_OVER, WIN, EXIT }; // định nghĩa các trạng thái của game
+GameState gameState = MENU; // trạng thái ban đầu là menu 
 
-SDL_Window* window = nullptr;
-SDL_Renderer* renderer = nullptr;
-SDL_Texture* menuBackground = nullptr;
-SDL_Texture* background = nullptr;
-SDL_Texture* player1Texture = nullptr;
-SDL_Texture* player2Texture = nullptr;
-SDL_Texture* bulletTexture = nullptr;
-SDL_Texture* enemyTexture = nullptr;
-SDL_Texture* enemy2Texture = nullptr;
-SDL_Texture* enemy3Texture = nullptr;
-SDL_Texture* enemy4Texture = nullptr;
-SDL_Texture* enemy5Texture = nullptr;
-SDL_Texture* bossTexture = nullptr;
-SDL_Texture* bomTexture = nullptr;
-SDL_Texture* scoreTexture = nullptr;
-SDL_Texture* explosionTexture = nullptr;
-SDL_Texture* gameOverTexture = nullptr;
-SDL_Texture* winTexture = nullptr;
-SDL_Texture* playAgainTexture = nullptr;
-SDL_Texture* exitTexture = nullptr;
-SDL_Texture* onePlayerTexture = nullptr;
-SDL_Texture* twoPlayersTexture = nullptr;
-SDL_Texture* tutorialTexture = nullptr;
-SDL_Texture* menuExitTexture = nullptr;
-SDL_Texture* tutorialTextTexture1 = nullptr;
+SDL_Window* window = nullptr; // con trỏ trỏ đến cửa sổ trò chơi, khơi tạo là null
+SDL_Renderer* renderer = nullptr; // con trỏ trỏ trới renderer để vẽ cửa sổ, khởi tạo là null
+SDL_Texture* menuBackground = nullptr; // texture cho nền menu, khởi tạo là null 
+SDL_Texture* background = nullptr; // texture cho nền trò chơi khi chơi
+SDL_Texture* player1Texture = nullptr; // texture cho người chơi 1
+SDL_Texture* player2Texture = nullptr;// texture cho người chơi 2
+SDL_Texture* bulletTexture = nullptr;//texture của viên đạn
+SDL_Texture* enemyTexture = nullptr;// texture kẻ địch
+SDL_Texture* enemy2Texture = nullptr;// texture kẻ địch 2
+SDL_Texture* enemy3Texture = nullptr;// texture kẻ địch 3
+SDL_Texture* enemy4Texture = nullptr;// texture kẻ địch4
+SDL_Texture* enemy5Texture = nullptr;// texture kẻ địch 5
+SDL_Texture* bossTexture = nullptr; // texture boss
+SDL_Texture* bomTexture = nullptr; // texture đạn của địch
+SDL_Texture* scoreTexture = nullptr; // texture hiển thị điểm số
+SDL_Texture* explosionTexture = nullptr; // texture ảnh vụ nổ 
+SDL_Texture* gameOverTexture = nullptr; // texture cho văn bản gameover
+SDL_Texture* winTexture = nullptr; // texture cho văn bản you win 
+SDL_Texture* playAgainTexture = nullptr; //texture cho văn bản playagain
+SDL_Texture* exitTexture = nullptr; // texture cho văn bản exit 
+SDL_Texture* onePlayerTexture = nullptr; // texture cho văn bản 1 player
+SDL_Texture* twoPlayersTexture = nullptr; // texture cho văn bản 2 players
+SDL_Texture* tutorialTexture = nullptr; // texture cho hướng dẫn
+SDL_Texture* menuExitTexture = nullptr; // texture cho văn bản exit trong menu 
+SDL_Texture* tutorialTextTexture1 = nullptr; //
 SDL_Texture* tutorialTextTexture2 = nullptr;
 SDL_Texture* backToMenuTexture = nullptr;
 TTF_Font* font = nullptr;
@@ -417,7 +415,6 @@ void renderWin() {
     SDL_RenderCopy(renderer, exitTexture, nullptr, &exitRect);
     SDL_RenderPresent(renderer);
 }
-
 void handleEvents(bool& running) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
@@ -459,7 +456,7 @@ void handleEvents(bool& running) {
                     player1 = {SCREEN_WIDTH / 2 - 25, SCREEN_HEIGHT - 60, 50, 50, true, 0, 1, 0};
                     player2.active = false;
                     gameState = PLAYING;
-                    Mix_PauseMusic(); // Tạm dừng nhạc nền khi vào game
+                    // Bỏ Mix_PauseMusic() để nhạc nền tiếp tục phát
                 }
                 else if (mouseX >= twoPlayersRect.x && mouseX <= twoPlayersRect.x + twoPlayersRect.w &&
                          mouseY >= twoPlayersRect.y && mouseY <= twoPlayersRect.y + twoPlayersRect.h) {
@@ -468,7 +465,7 @@ void handleEvents(bool& running) {
                     player1 = {SCREEN_WIDTH / 4 - 25, SCREEN_HEIGHT - 60, 50, 50, true, 0, 1, 0};
                     player2 = {3 * SCREEN_WIDTH / 4 - 40, SCREEN_HEIGHT - 80, 50, 50, true, 0, 1, 0};
                     gameState = PLAYING;
-                    Mix_PauseMusic(); // Tạm dừng nhạc nền khi vào game
+                    // Bỏ Mix_PauseMusic() để nhạc nền tiếp tục phát
                 }
                 else if (mouseX >= tutorialRect.x && mouseX <= tutorialRect.x + tutorialRect.w &&
                          mouseY >= tutorialRect.y && mouseY <= tutorialRect.y + tutorialRect.h) {
@@ -513,6 +510,7 @@ void handleEvents(bool& running) {
                     winSoundPlayed = false; // Reset trạng thái âm thanh WIN
                     gameOverSoundPlayed = false; // Reset trạng thái âm thanh GAME_OVER
                     gameState = PLAYING;
+                    Mix_ResumeMusic(); // Bật lại nhạc nền khi chơi lại
                 }
                 else if (mouseX >= exitRect.x && mouseX <= exitRect.x + exitRect.w &&
                          mouseY >= exitRect.y && mouseY <= exitRect.y + exitRect.h) {
@@ -528,7 +526,7 @@ void handleEvents(bool& running) {
 void updateGame() {
     if ((!player1.active && !isTwoPlayers) || (!player1.active && !player2.active && isTwoPlayers)) {
         gameState = GAME_OVER;
-        Mix_ResumeMusic(); // Tiếp tục nhạc nền khi game over
+        Mix_PauseMusic(); // Tạm dừng nhạc nền khi game over
         return;
     }
 
@@ -620,7 +618,7 @@ void updateGame() {
                     Mix_PlayChannel(-1, explosionSound, 0); // Phát âm thanh nổ
                     if (enemies[i].enemyType == 6) {
                         gameState = WIN;
-                        Mix_ResumeMusic(); // Tiếp tục nhạc nền khi thắng
+                        Mix_PauseMusic(); // Tạm dừng nhạc nền khi thắng
                     }
                 }
             }
@@ -688,7 +686,6 @@ void updateGame() {
     enemies.erase(remove_if(enemies.begin(), enemies.end(), [](const Object& e) { return !e.active; }), enemies.end());
     enemyBullets.erase(remove_if(enemyBullets.begin(), enemyBullets.end(), [](const Object& b) { return !b.active; }), enemyBullets.end());
 }
-
 void render() {
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, background, nullptr, nullptr);
