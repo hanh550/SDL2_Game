@@ -85,7 +85,7 @@ bool gameOverSoundPlayed = false;
 bool onePlayerHover = false;
 bool twoPlayersHover = false;
 bool tutorialHover = false;
-bool exitHover = false;
+bool exitHover = false; 
 bool backToMenuHover = false;
 
 // Trạng thái âm thanh (bật mặc định)
@@ -136,9 +136,9 @@ SDL_Texture* loadTexture(const char* filename) {
 }
 
 // Hàm renderText: Tạo texture từ văn bản với font và màu sắc
-SDL_Texture* renderText(const char* text, TTF_Font* textFont, SDL_Color color) {
+SDL_Texture* renderText(const char* text, TTF_Font* textFont, SDL_Color color) { // tải 1 hình ảnh từ file và lưu vào 1 sdl_surface 
     if (!textFont) {
-        printf("Font is null!\n");
+        printf("Font is null!\n"); // nếu k tải đc thì in báo lỗi 
         return nullptr;
     }
     SDL_Surface* surface = TTF_RenderText_Solid(textFont, text, color);
@@ -147,7 +147,7 @@ SDL_Texture* renderText(const char* text, TTF_Font* textFont, SDL_Color color) {
         return nullptr;
     }
     SDL_Texture* texture = SDL_CreateTextureFromSurface(boVe, surface);
-    SDL_FreeSurface(surface);
+    SDL_FreeSurface(surface);  // giải phóng bộ nhớ của sdl_surface
     if (!texture) {
         printf("Error creating texture from text %s: %s\n", text, SDL_GetError());
     }
@@ -157,7 +157,7 @@ SDL_Texture* renderText(const char* text, TTF_Font* textFont, SDL_Color color) {
 // Hàm updateScoreTexture: Cập nhật texture hiển thị điểm số
 void updateScoreTexture() {
     char scoreText[32];
-    sprintf(scoreText, "SCORE: %d", score); // Thay "Diem" thành "Score"
+    sprintf(scoreText, "SCORE: %d", score); 
     if (diemSoTexture) SDL_DestroyTexture(diemSoTexture);
     diemSoTexture = renderText(scoreText, phongChu, trang);
     if (diemSoTexture) {
@@ -165,7 +165,7 @@ void updateScoreTexture() {
         SDL_QueryTexture(diemSoTexture, NULL, NULL, &diemSoRect.w, &diemSoRect.h);
     }
 }
-bool initialize() {
+bool initialize() { // hàm khởi tạo SDL và các thành phần khác(hình ảnh, âm thanh, văn bản)
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         printf("SDL_Init failed: %s\n", SDL_GetError());
         return false;
@@ -176,27 +176,27 @@ bool initialize() {
         return false;
     }
 
-    if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) {
+    if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) {   // khởi tạo SDL_image để tải hình ảnh file JPG và PNG
         printf("IMG_Init failed: %s\n", IMG_GetError());
         return false;
     }
-    if (TTF_Init() == -1) {
+    if (TTF_Init() == -1) { // TTF_Init() khởi tạo thư viện ttf để hiển thị văn bản
         printf("TTF_Init failed: %s\n", TTF_GetError());
         return false;
     }
 
-    cuaSo = SDL_CreateWindow("Tro Choi Ban Sung", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    cuaSo = SDL_CreateWindow("Tro Choi Ban Sung", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN); // Tạo cửa sổ trò chơi, để ở trung tâm màn hình 
     if (!cuaSo) {
         printf("Tao cua so that bai: %s\n", SDL_GetError());
         return false;
     }
 
-    boVe = SDL_CreateRenderer(cuaSo, -1, SDL_RENDERER_ACCELERATED);
+    boVe = SDL_CreateRenderer(cuaSo, -1, SDL_RENDERER_ACCELERATED); // Tạo bộ vẽ (renderer) để vẽ lên cửa sổ
     if (!boVe) {
         printf("Tao bo ve that bai: %s\n", SDL_GetError());
         return false;
     }
-
+    // tải hình ảnh và âm thanh từ file vào các biến texture và âm thanh tương ứng
     nenMenu = loadTexture("chickenbackground.jpg");
     if (!nenMenu) return false;
     nenTroChoi = loadTexture("space.jpg");
@@ -223,7 +223,7 @@ bool initialize() {
     if (!bomTexture) return false;
     noTexture = loadTexture("explosion.png");
     if (!noTexture) return false;
-
+    // tai font chu choi
     phongChu = TTF_OpenFont("arial.ttf", 36);
     if (!phongChu) {
         printf("Failed to load font: %s\n", TTF_GetError());
@@ -234,7 +234,7 @@ bool initialize() {
         printf("Failed to load big font: %s\n", TTF_GetError());
         return false;
     }
-
+    // tải nhạc nền và âm thanh từ file vào các biến âm thanh tương ứng
     backgroundMusic = Mix_LoadMUS("background_music.mp3");
     if (!backgroundMusic) {
         printf("Failed to load background music: %s\n", Mix_GetError());
@@ -327,7 +327,7 @@ bool initialize() {
     SDL_QueryTexture(thoatMenuTexture, NULL, NULL, &thoatMenuRect.w, &thoatMenuRect.h);
     thoatMenuRect = {SCREEN_WIDTH - thoatMenuRect.w - padding, SCREEN_HEIGHT - thoatMenuRect.h - padding, thoatMenuRect.w, thoatMenuRect.h};
 
-    huongDanTextTexture1 = renderText("Tutorial: Use A/D to move Player 1, Space to shoot.", phongChu, trang);
+    huongDanTextTexture1 = renderText("Tutorial: Use A/D to move Player 1, Space to shoot.", phongChu, trang); // 
     if (!huongDanTextTexture1) return false;
     SDL_QueryTexture(huongDanTextTexture1, NULL, NULL, &huongDanTextRect1.w, &huongDanTextRect1.h);
     huongDanTextRect1 = {(SCREEN_WIDTH - huongDanTextRect1.w) / 2, SCREEN_HEIGHT / 3, huongDanTextRect1.w, huongDanTextRect1.h};
@@ -350,16 +350,16 @@ bool initialize() {
     return true;
 }
 
-void renderMenu() {
+void renderMenu() { // vẽ menu chính (xóa hình nền và vẽ nền menu)
     SDL_RenderClear(boVe);
     SDL_RenderCopy(boVe, nenMenu, nullptr, nullptr);
 
     SDL_DestroyTexture(soundTexture);
     soundTexture = renderText(soundEnabled ? "Sound: ON" : "Sound: OFF", phongChu, trang);
-    SDL_RenderCopy(boVe, soundTexture, nullptr, &soundRect);
+    SDL_RenderCopy(boVe, soundTexture, nullptr, &soundRect); // vẽ các đối tượng như hình ảnh, văn bản lên màn hình 
 
     SDL_DestroyTexture(motNguoiChoiTexture);
-    motNguoiChoiTexture = renderText("1 Player", phongChu, onePlayerHover ? vang : mauDo);
+    motNguoiChoiTexture = renderText("1 Player", phongChu, onePlayerHover ? vang : mauDo); // chuột hover lên nút , sẽ chuyển màu chữ sang màu vàng 
     SDL_RenderCopy(boVe, motNguoiChoiTexture, nullptr, &motNguoiChoiRect);
 
     SDL_DestroyTexture(haiNguoiChoiTexture);
@@ -374,7 +374,7 @@ void renderMenu() {
     thoatMenuTexture = renderText("  Exit", phongChu, exitHover ? vang : mauDo);
     SDL_RenderCopy(boVe, thoatMenuTexture, nullptr, &thoatMenuRect);
 
-    SDL_RenderPresent(boVe);
+    SDL_RenderPresent(boVe); // hiển thị nội dung renderer lên màn hình
 }
 
 void renderTutorial() {
@@ -427,7 +427,7 @@ void renderWin() {
     SDL_RenderPresent(boVe);
 }
 
-void handleEvents(bool& isRunning) {
+void handleEvents(bool& isRunning) { // hàm xử lý sự kiện
     SDL_Event suKien;
     while (SDL_PollEvent(&suKien)) {
         if (suKien.type == SDL_QUIT) {
@@ -463,7 +463,7 @@ void handleEvents(bool& isRunning) {
             int mouseX, mouseY;
             SDL_GetMouseState(&mouseX, &mouseY);
 
-            if (trangThaiGame == MENU) {
+            if (trangThaiGame == MENU) { // tắt bật âm thanh
                 if (mouseX >= soundRect.x && mouseX <= soundRect.x + soundRect.w &&
                     mouseY >= soundRect.y && mouseY <= soundRect.y + soundRect.h) {
                     soundEnabled = !soundEnabled;
@@ -472,7 +472,7 @@ void handleEvents(bool& isRunning) {
                     } else {
                         Mix_PauseMusic();
                     }
-                }
+                } //chon che do 1 nguoi choi 
                 if (mouseX >= motNguoiChoiRect.x && mouseX <= motNguoiChoiRect.x + motNguoiChoiRect.w &&
                     mouseY >= motNguoiChoiRect.y && mouseY <= motNguoiChoiRect.y + motNguoiChoiRect.h) {
                     Mix_PlayChannel(-1, clickSound, 0);
@@ -481,23 +481,24 @@ void handleEvents(bool& isRunning) {
                     nguoiChoi2.active = false;
                     trangThaiGame = DANG_CHOI;
                 }
+                // trang thai 2 nguoi choi 
                 else if (mouseX >= haiNguoiChoiRect.x && mouseX <= haiNguoiChoiRect.x + haiNguoiChoiRect.w &&
                          mouseY >= haiNguoiChoiRect.y && mouseY <= haiNguoiChoiRect.y + haiNguoiChoiRect.h) {
                     Mix_PlayChannel(-1, clickSound, 0);
                     isTwoPlayers = true;
                     nguoiChoi1 = {SCREEN_WIDTH / 4 - 25, SCREEN_HEIGHT - 60, 50, 50, true, 0, 1, 0};
                     nguoiChoi2 = {3 * SCREEN_WIDTH / 4 - 40, SCREEN_HEIGHT - 80, 50, 50, true, 0, 1, 0};
-                    trangThaiGame = DANG_CHOI;
+                    trangThaiGame = DANG_CHOI; // chuyển trạng thái sang đang chơi
                 }
                 else if (mouseX >= huongDanRect.x && mouseX <= huongDanRect.x + huongDanRect.w &&
                          mouseY >= huongDanRect.y && mouseY <= huongDanRect.y + huongDanRect.h) {
                     Mix_PlayChannel(-1, clickSound, 0);
-                    trangThaiGame = HUONG_DAN;
+                    trangThaiGame = HUONG_DAN; // chuyển sang hướng dẫn
                 }
                 else if (mouseX >= thoatMenuRect.x && mouseX <= thoatMenuRect.x + thoatMenuRect.w &&
                          mouseY >= thoatMenuRect.y && mouseY <= thoatMenuRect.y + thoatMenuRect.h) {
                     Mix_PlayChannel(-1, clickSound, 0);
-                    trangThaiGame = THOAT;
+                    trangThaiGame = THOAT;  //chuyển trạng thái thoát game
                     isRunning = false;
                 }
             }
@@ -505,7 +506,7 @@ void handleEvents(bool& isRunning) {
                 if (mouseX >= quayLaiMenuRect.x && mouseX <= quayLaiMenuRect.x + quayLaiMenuRect.w &&
                     mouseY >= quayLaiMenuRect.y && mouseY <= quayLaiMenuRect.y + quayLaiMenuRect.h) {
                     Mix_PlayChannel(-1, clickSound, 0);
-                    trangThaiGame = MENU;
+                    trangThaiGame = MENU;    // quay lại menu chính
                 }
             }
             else if (trangThaiGame == GAME_OVER || trangThaiGame == THANG) {
@@ -533,7 +534,7 @@ void handleEvents(bool& isRunning) {
                     gameOverSoundPlayed = false;
                     trangThaiGame = DANG_CHOI;
                     Mix_ResumeMusic();
-                }
+                } // thoat game
                 else if (mouseX >= thoatRect.x && mouseX <= thoatRect.x + thoatRect.w &&
                          mouseY >= thoatRect.y && mouseY <= thoatRect.y + thoatRect.h) {
                     Mix_PlayChannel(-1, clickSound, 0);
@@ -571,6 +572,7 @@ void handleEvents(bool& isRunning) {
 }
 
 void updateGame() {
+    //kiểm tra điều kiện thua game
     if ((!nguoiChoi1.active && !isTwoPlayers) || (!nguoiChoi1.active && !nguoiChoi2.active && isTwoPlayers)) {
         trangThaiGame = GAME_OVER;
         Mix_PauseMusic();
@@ -579,20 +581,20 @@ void updateGame() {
 
     const Uint8* keystates = SDL_GetKeyboardState(NULL);
 
-    if (keystates[SDL_SCANCODE_A] && nguoiChoi1.x > 0) {
-        nguoiChoi1.x -= PLAYER_SPEED;
+    if (keystates[SDL_SCANCODE_A] && nguoiChoi1.x > 0) { // kiểm tra xem phím A có đang đc nhấn hay 0 , xem vị trí hiện tại có lớn hơn 0 hay không để tránh di chuyển ra ngoài mần 
+        nguoiChoi1.x -= PLAYER_SPEED; // nếu có thì vị trí sẽ giảm đi 5 pixel
     }
-    if (keystates[SDL_SCANCODE_D] && nguoiChoi1.x < SCREEN_WIDTH - nguoiChoi1.w) {
+    if (keystates[SDL_SCANCODE_D] && nguoiChoi1.x < SCREEN_WIDTH - nguoiChoi1.w) { // di chuyển vị trí người chơi 
         nguoiChoi1.x += PLAYER_SPEED;
     }
-
+    // người chơi 1 bắn đạn bằng space
     if (keystates[SDL_SCANCODE_SPACE] && bulletCooldown1 == 0 && nguoiChoi1.active) {
         bullets.push_back({nguoiChoi1.x + nguoiChoi1.w / 2 - 5, nguoiChoi1.y, 10, 20, true, 0, 1, 0});
         Mix_PlayChannel(-1, shootSound, 0);
         bulletCooldown1 = 10;
     }
     if (bulletCooldown1 > 0) bulletCooldown1--;
-
+    // xử lý người chơi 2 nếu có 
     if (isTwoPlayers) {
         if (keystates[SDL_SCANCODE_LEFT] && nguoiChoi2.x > 0)
             nguoiChoi2.x -= PLAYER_SPEED;
@@ -605,12 +607,12 @@ void updateGame() {
         }
         if (bulletCooldown2 > 0) bulletCooldown2--;
     }
-
-    for (auto& bullet : bullets) bullet.y -= BULLET_SPEED;
+    //cập nhật vị trí đạn của người chơi 
+    for (auto& bullet : bullets) bullet.y -= BULLET_SPEED; // nếu bullet có tọa độ nhỏ hơn y thì sẽ xóa bullet đó đi
     bullets.erase(remove_if(bullets.begin(), bullets.end(), [](const Object& b) { return b.y < -b.h; }), bullets.end());
-
+    // sinh kẻ địch và boss 
     if (!bossSpawned) {
-        if (score >= 500 && enemies.empty()) {
+        if (score >= 500 && enemies.empty()) { // nếu điểm >= 500 và không còn kẻ địch nào
             enemies.push_back({SCREEN_WIDTH / 2 - 50, 50, 100, 100, true, 6, 30, 1}); 
             bossSpawned = true;
         } else if (score < 500) {
@@ -618,19 +620,19 @@ void updateGame() {
             int extraEnemies = (score / 100) * 2;
             int totalEnemies = baseEnemies + extraEnemies;
 
-            if (--enemySpawnTimer <= 0) {
+            if (--enemySpawnTimer <= 0) {    //ran dom enemy
                 for (int i = 0; i < totalEnemies; i++) {
-                    int type = (rand() % 5) + 1;
-                    enemies.push_back({rand() % (SCREEN_WIDTH - 50), 0, 50, 50, true, type, 1, 0});
+                    int type = (rand() % 5) + 1; // random loại kẻ địch sẽ xuất hiện từ 1 - 5 
+                    enemies.push_back({rand() % (SCREEN_WIDTH - 50), 0, 50, 50, true, type, 1, 0}); // sử dụng hàm rend để chọn vị trí trên trục x và thời gian tạo kẻ địch 
                 }
                 enemySpawnTimer = max(30, 100 - (score / 100) * 10);
             }
         }
     }
-
-    for (auto& enemy : enemies) {
+    // di chuyển kẻ địch và bắn đạn
+    for (auto& enemy : enemies) {  
         if (enemy.enemyType == 6) {
-            enemy.x += BOSS_SPEED * enemy.direction;
+            enemy.x += BOSS_SPEED * enemy.direction;   // di chuyển kẻ địch theo chiều ngang
             if (enemy.x <= 0) enemy.direction = 1;
             if (enemy.x >= SCREEN_WIDTH - enemy.w) enemy.direction = -1;
 
@@ -641,7 +643,7 @@ void updateGame() {
                 enemyBullets.push_back({enemy.x + 3 * enemy.w / 4 - 5, enemy.y + enemy.h, 10, 20, true, 0, 1, 0});
             }
         } else {
-            enemy.y += ENEMY_SPEED;
+            enemy.y += ENEMY_SPEED;  //tăng giá trị y của kẻ địch lên 5 pixel mỗi lần lặp
             int shootChance = 100;
             if (rand() % shootChance == 0 && enemy.active) {
                 enemyBullets.push_back({enemy.x + enemy.w / 2 - 5, enemy.y + enemy.h, 10, 20, true, 0, 1, 0});
@@ -652,9 +654,9 @@ void updateGame() {
 
     for (auto& bomb : enemyBullets) bomb.y += BULLET_SPEED;
     enemyBullets.erase(remove_if(enemyBullets.begin(), enemyBullets.end(), [](const Object& b) { return b.y > SCREEN_HEIGHT; }), enemyBullets.end());
-
-    for (size_t i = 0; i < enemies.size(); ++i) {
-        for (size_t j = 0; j < bullets.size(); ++j) {
+    // kiểm tra va chạm giữa đạn và kẻ địch
+    for (size_t i = 0; i < enemies.size(); ++i) {   // kiểm tra va chạm với kẻ địch 
+        for (size_t j = 0; j < bullets.size(); ++j) { // điều kiện va chạm với các phần (trái phải .. ) của kẻ địch, nếu các phần đó là đúng, nghĩa là viên đạn va chạm với kẻ địch 
             if (bullets[j].active && enemies[i].active &&
                 bullets[j].x < enemies[i].x + enemies[i].w && bullets[j].x + bullets[j].w > enemies[i].x &&
                 bullets[j].y < enemies[i].y + enemies[i].h && bullets[j].y + bullets[j].h > enemies[i].y) {
@@ -685,7 +687,7 @@ void updateGame() {
             break;
         }
     }
-
+    // tương tự với người chơi 2 người 
     if (isTwoPlayers) {
         for (size_t i = 0; i < enemies.size(); ++i) {
             if (nguoiChoi2.active && enemies[i].active &&
@@ -698,7 +700,7 @@ void updateGame() {
             }
         }
     }
-
+    // cập nhật hiệu ứng vụ nổ và xóa các đối tượng không còn hoạt động
     for (size_t i = 0; i < enemyBullets.size(); ++i) {
         if (nguoiChoi1.active && enemyBullets[i].active &&
             nguoiChoi1.x < enemyBullets[i].x + enemyBullets[i].w && nguoiChoi1.x + nguoiChoi1.w > enemyBullets[i].x &&
@@ -738,25 +740,25 @@ void updateGame() {
 }
 
 void render() {
-    SDL_RenderClear(boVe);
-    SDL_RenderCopy(boVe, nenTroChoi, nullptr, nullptr);
+    SDL_RenderClear(boVe);   // xoa man hinh va ve nen tro choi
+    SDL_RenderCopy(boVe, nenTroChoi, nullptr, nullptr); //vẽ nền cho trò chơi
 
     if (nguoiChoi1.active) {
-        SDL_Rect nguoiChoi1Rect = {nguoiChoi1.x, nguoiChoi1.y, nguoiChoi1.w, nguoiChoi1.h};
+        SDL_Rect nguoiChoi1Rect = {nguoiChoi1.x, nguoiChoi1.y, nguoiChoi1.w, nguoiChoi1.h};   // ve nguoi choi 1 neu con song 
         SDL_RenderCopy(boVe, nguoiChoi1Texture, nullptr, &nguoiChoi1Rect);
     }
     if (isTwoPlayers && nguoiChoi2.active) {
-        SDL_Rect nguoiChoi2Rect = {nguoiChoi2.x, nguoiChoi2.y, nguoiChoi2.w, nguoiChoi2.h};
+        SDL_Rect nguoiChoi2Rect = {nguoiChoi2.x, nguoiChoi2.y, nguoiChoi2.w, nguoiChoi2.h};// ve nguoi choi 2 neu con song trong che do 2 players
         SDL_RenderCopy(boVe, nguoiChoi2Texture, nullptr, &nguoiChoi2Rect);
     }
 
-    for (const auto& bullet : bullets) {
+    for (const auto& bullet : bullets) { //ve dan cua all
         SDL_Rect bRect = {bullet.x, bullet.y, bullet.w, bullet.h};
         SDL_RenderCopy(boVe, danTexture, nullptr, &bRect);
     }
 
-    for (const auto& enemy : enemies) {
-        SDL_Rect eRect = {enemy.x, enemy.y, enemy.w, enemy.h};
+    for (const auto& enemy : enemies) {    //ve các kẻ địch random và boss
+        SDL_Rect eRect = {enemy.x, enemy.y, enemy.w, enemy.h};  
         switch (enemy.enemyType) {
             case 1: SDL_RenderCopy(boVe, keDichTexture, nullptr, &eRect); break;
             case 2: SDL_RenderCopy(boVe, keDich2Texture, nullptr, &eRect); break;
@@ -767,7 +769,7 @@ void render() {
         }
     }
 
-    for (const auto& bomb : enemyBullets) {
+    for (const auto& bomb : enemyBullets) { // đạn của địch và hiệu ứng nổ 
         SDL_Rect bombRect = {bomb.x, bomb.y, bomb.w, bomb.h};
         SDL_RenderCopy(boVe, bomTexture, nullptr, &bombRect);
     }
@@ -779,11 +781,11 @@ void render() {
         }
     }
 
-    SDL_RenderCopy(boVe, diemSoTexture, nullptr, &diemSoRect);
-    SDL_RenderPresent(boVe);
+    SDL_RenderCopy(boVe, diemSoTexture, nullptr, &diemSoRect); // vẽ điểm số 
+    SDL_RenderPresent(boVe);  // hiển thị toàn bộ nội dung 
 }
 
-void clearResources() {
+void clearResources() { //giải phóng tất cả các hình ảnh
     if (backgroundMusic) Mix_FreeMusic(backgroundMusic);
     if (shootSound) Mix_FreeChunk(shootSound);
     if (explosionSound) Mix_FreeChunk(explosionSound);
@@ -828,7 +830,7 @@ void clearResources() {
     if (cuaSo) SDL_DestroyWindow(cuaSo);
 
     IMG_Quit();
-    SDL_Quit();
+    SDL_Quit(); // thoát sdl image và sdl để kết thuc chương trình
 }
 
 int main(int argc, char* argv[]) {
